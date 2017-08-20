@@ -1,5 +1,7 @@
 module tea.xtea;
 
+import std.bitmanip;
+
 package struct XTEA
 {
 	/// XTEA delta constant
@@ -95,20 +97,35 @@ package struct XTEA
 
 class Xtea
 {
-	public static ubyte[] encrypt(ubyte[] input, int[4] key, int rounds)
+	public static ubyte[] encrypt(ubyte[] input, int[4] key, int rounds, bool autoHandleFillZero = false)
 	{
-		auto data = input.dup;
+		ubyte[] data;
+		if (autoHandleFillZero)
+		{
+			data = new ubyte[4];
+			int orgi_len = cast(int)input.length;
+			data.write!int(orgi_len, 0);
+		}
+		data ~= input.dup;
 		while (data.length % 8 != 0)	data ~= 0;
+		data[$ - 1] = cast(ubyte)(input.length);
 		XTEA xeta = XTEA(key, rounds);
 		xeta.Encrypt(data);
 		return data;
 	}
 	
-	public static ubyte[] decrypt(ubyte[] input, int[4] key, int rounds)
+	public static ubyte[] decrypt(ubyte[] input, int[4] key, int rounds, bool autoHandleFillZero = false)
 	{
 		auto data = input.dup;
 		XTEA xeta = XTEA(key, rounds);
 		xeta.Decrypt(data);
-		return data;
+		if (autoHandleFillZero)
+		{
+			int orgi_len;
+			orgi_len = data.peek!int(0);
+			return data[4..orgi_len + 4];
+		}
+		else
+			return data;
 	}
 }
