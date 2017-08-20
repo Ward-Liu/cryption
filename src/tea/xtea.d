@@ -1,4 +1,4 @@
-module tea.xtea;
+module cryption.tea.xtea;
 
 import std.bitmanip;
 
