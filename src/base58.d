@@ -1,4 +1,4 @@
-module base58;
+module cryption.base58;
 
 import std.bigint;
 import std.conv;
