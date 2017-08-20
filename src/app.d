@@ -6,7 +6,7 @@ void main() {
 
 unittest
 {
-	import base58;
+	import cryption.base58;
 	
 	string str = Base58.encode(cast(byte[])"abcdef中文字符abc");
 	writeln(str);
@@ -16,7 +16,7 @@ unittest
 
 unittest
 {
-	import tea.xtea;
+	import cryption.tea.xtea;
 	
 	ubyte[] data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 	int[4] key = [1, 2, 3, 4];
