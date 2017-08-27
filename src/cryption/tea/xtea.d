@@ -128,4 +128,18 @@ class Xtea
 		else
 			return data;
 	}
+	
+	unittest
+	{
+		import cryption.tea.xtea;
+		
+		ubyte[] data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+		int[4] key = [1, 2, 3, 4];
+		int rounds = 64;
+		
+		ubyte[] buf = Xtea.encrypt(data, key, rounds);
+		writeln(buf);
+		buf = Xtea.decrypt(buf, key, rounds);
+		writeln(buf);
+	}
 }

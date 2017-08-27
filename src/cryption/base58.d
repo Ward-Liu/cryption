@@ -156,4 +156,14 @@ public class Base58
 		
 		return cast(byte) remainder;
 	}
+	
+	unittest
+	{
+		import cryption.base58;
+		
+		string str = Base58.encode(cast(byte[])"abcdef中文字符abc");
+		writeln(str);
+		byte[] buf = Base58.decode(str);
+		writeln(cast(string)buf);
+	}
 }
