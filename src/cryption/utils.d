@@ -1,1 +1,1 @@
-import cryption.utils;
+module cryption.utils;
