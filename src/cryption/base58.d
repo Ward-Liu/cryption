@@ -21,12 +21,7 @@ public class Base58
 		}
 	}
 
-	/**
-	 * Encodes the given bytes as a base58 string (no checksum is appended).
-	 *
-	 * @param input the bytes to encode
-	 * @return the base58-encoded string
-	 */
+	/// Encodes the given bytes as a base58 string (no checksum is appended).
 	public static string encode(byte[] inp)
 	{
 		if (inp.length == 0)
@@ -68,13 +63,7 @@ public class Base58
 		return encoded[outputStart .. encoded.length].to!string();
 	}
 
-	/**
-	 * Decodes the given base58 string into the original data bytes.
-	 *
-	 * @param input the base58-encoded string to decode
-	 * @return the decoded data bytes
-	 * @throws AddressFormatException if the given string is not a valid base58 string
-	 */
+	/// Decodes the given base58 string into the original data bytes.
 	public static byte[] decode(string input)
 	{
 		if (input.length == 0)
@@ -129,18 +118,11 @@ public class Base58
 		return BigInt(cast(string)decode(input));
 	}
 	
-	/**
-	 * Divides a number, represented as an array of bytes each containing a single digit
-	 * in the specified base, by the given divisor. The given number is modified in-place
-	 * to contain the quotient, and the return value is the remainder.
-	 *
-	 * @param number the number to divide
-	 * @param firstDigit the index within the array of the first non-zero digit
-	 *		(this is used for optimization by skipping the leading zeros)
-	 * @param base the base in which the number's digits are represented (up to 256)
-	 * @param divisor the number to divide by (up to 256)
-	 * @return the remainder of the division operation
-	 */
+	/++
+	Divides a number, represented as an array of bytes each containing a single digit
+	in the specified base, by the given divisor. The given number is modified in-place
+	to contain the quotient, and the return value is the remainder.
+	+/
 	private static byte divmod(byte[] number, int firstDigit, int base, int divisor)
 	{
 		// this is just long division which accounts for the base of the input digits
@@ -161,7 +143,7 @@ public class Base58
 	{
 		import cryption.base58;
 		
-		string str = Base58.encode(cast(byte[])"abcdef中文字符abc");
+		string str = Base58.encode(cast(byte[])"abcdef1234");
 		writeln(str);
 		byte[] buf = Base58.decode(str);
 		writeln(cast(string)buf);
