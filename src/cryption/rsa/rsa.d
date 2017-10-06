@@ -1,47 +1,24 @@
-module cryption.rsa;
+module cryption.rsa.rsa;
 
 import std.bigint;
+import std.bitmanip;
 import std.random;
 import std.datetime;
-
-import std.stdio;
+import std.base64;
 import std.conv;
+import std.array;
 
-struct RSAKeyPair
-{
-	string privateKey;
-	string publicKey;
-	
-	this(string privateKey, string publicKey)
-	{
-		this.privateKey = privateKey;
-		this.publicKey = publicKey;
-	}
-}
-
-struct PRNG
-{
-    private static Mt19937 generator;
-
-    static this()
-    {
-        generator.seed(Clock.currTime().second);
-    }
-
-	uint next()
-	{
-		uint v = generator.front;
-		generator.popFront();
-		
-		return v;
-	}
-}
+public import cryption.rsa.keypair;
+import cryption.rsa.prng;
+import cryption.rsa.pkcs.ipkcs;
+import cryption.rsa.pkcs.simpleformat;
+import cryption.rsa.bigint;
 
 class RSA
 {
-	private static PRNG rnd;
+public:
 
-	public static RSAKeyPair generateKeyPair(uint bitLength = 1024)
+	static RSAKeyPair generateKeyPair(uint bitLength = 1024)
 	{
 		assert((bitLength >= 16) && (bitLength % 8 == 0), "Bitlength is required to be a multiple of 8 and not less than 16.");
 		
@@ -86,19 +63,37 @@ class RSA
 		}
 		n = p * q;
 		t = (p - 1) * (q - 1);
-		
-		while (true)
-		{
-			e = randomBigInt(bitLength / 2, 0, 1);
-			if (isProbablePrime(e)) break;
-		}
+		e = PRIMES[(rnd.next % 42) + 6500];
 		
         BigInt d = cal(e, t);
 
-        return RSAKeyPair(e.to!string, d.to!string);
+        return RSAKeyPair(encodeKey(n, d), encodeKey(n, e));
     }
 
-	private static BigInt randomBigInt(uint bitLength, int highBit = -1, int lowBit = -1)
+	static string encodeKey(T : iPKCS = SimpleFormat)(BigInt n, BigInt d_e)
+	{
+		return T.encodeKey(n, d_e);
+	}
+	
+	static void decodeKey(T : iPKCS = SimpleFormat)(string key, out BigInt n, out BigInt d_e)
+	{
+		T.decodeKey(key, n, d_e);
+	}
+
+	static ubyte[] encrypt()
+	{
+		return null;
+	}
+	
+	static ubyte[] decrypt()
+	{
+		return null;
+	}
+
+private:
+	static PRNG rnd;
+
+	static BigInt randomBigInt(uint bitLength, int highBit = -1, int lowBit = -1)
 	{
 		ubyte[] buffer = new ubyte[bitLength / 8];
 
@@ -121,17 +116,10 @@ class RSA
 		else if (lowBit == 1)
 			buffer[$ - 1] |= 0x01;
 	
-		BigInt ret = BigInt("0");
-		for (uint i; i < bitLength / 8; i++)
-		{
-			ret <<= 8;
-			ret += buffer[i];
-		}
-		
-	    return ret;
+		return BigIntHelper.bigIntFromUByteArray(buffer);
 	}
 
-	private static bool isProbablePrime(BigInt n)
+	static bool isProbablePrime(BigInt n)
 	{
 	    if (n == 2)
 	        return true;
@@ -145,7 +133,7 @@ class RSA
 	    return millerRabinPrimeTest(n);
 	}
 	
-	private static bool millerRabinPrimeTest(BigInt n)
+	static bool millerRabinPrimeTest(BigInt n)
 	{
 	    BigInt pow_mod(BigInt a, BigInt b, BigInt c)
 	    {
@@ -175,8 +163,8 @@ class RSA
 	    return true;
 	}
 
-	private immutable static size_t PRIME_TABLE_SIZE = 6542;
-	private immutable static uint[PRIME_TABLE_SIZE] PRIMES = [
+	immutable static size_t PRIME_TABLE_SIZE = 6543;
+	immutable static uint[PRIME_TABLE_SIZE] PRIMES = [
 	    2,	3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
 	    73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151,
 	    157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233,
@@ -807,6 +795,6 @@ class RSA
 	    65129, 65141, 65147, 65167, 65171, 65173, 65179, 65183, 65203, 65213,
 	    65239, 65257, 65267, 65269, 65287, 65293, 65309, 65323, 65327, 65353,
 	    65357, 65371, 65381, 65393, 65407, 65413, 65419, 65423, 65437, 65447,
-	    65449, 65479, 65497, 65519, 65521
+	    65449, 65479, 65497, 65519, 65521, 65537
 	];
 }
