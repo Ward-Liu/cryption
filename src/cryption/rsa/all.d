@@ -1,4 +1,4 @@
-module cryption.rsa.rsa;
+module cryption.rsa.all;
 
 import std.bigint;
 import std.bitmanip;
@@ -11,7 +11,9 @@ import std.array;
 public import cryption.rsa.keypair;
 import cryption.rsa.prng;
 import cryption.rsa.pkcs.ipkcs;
-import cryption.rsa.pkcs.simpleformat;
+public import cryption.rsa.pkcs.simpleformat;
+public import cryption.rsa.pkcs.pkcs1;
+public import cryption.rsa.pkcs.pkcs8;
 import cryption.rsa.bigint;
 
 class RSA
