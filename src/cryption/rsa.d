@@ -1,20 +1,23 @@
-module cryption.rsa.all;
+module cryption.rsa;
 
 import std.bigint;
 import std.bitmanip;
-import std.random;
 import std.datetime;
 import std.base64;
-import std.conv;
-import std.array;
 
-public import cryption.rsa.keypair;
-import cryption.rsa.prng;
-import cryption.rsa.pkcs.ipkcs;
-public import cryption.rsa.pkcs.simpleformat;
-public import cryption.rsa.pkcs.pkcs1;
-public import cryption.rsa.pkcs.pkcs8;
-import cryption.rsa.bigint;
+import cryption.utils;
+
+struct RSAKeyPair
+{
+	string privateKey;
+	string publicKey;
+	
+	this(string privateKey, string publicKey)
+	{
+		this.privateKey = privateKey;
+		this.publicKey = publicKey;
+	}
+}
 
 class RSA
 {
@@ -93,7 +96,7 @@ public:
 	}
 
 private:
-	static PRNG rnd;
+	static RandomGenerator rnd;
 
 	static BigInt randomBigInt(uint bitLength, int highBit = -1, int lowBit = -1)
 	{
@@ -800,3 +803,62 @@ private:
 	    65449, 65479, 65497, 65519, 65521, 65537
 	];
 }
+
+interface iPKCS
+{
+	static string encodeKey(BigInt n, BigInt d_e);
+	static void decodeKey(string key, out BigInt n, out BigInt d_e);
+}
+
+class SimpleFormat : iPKCS
+{
+	static string encodeKey(BigInt n, BigInt d_e)
+	{
+		ubyte[] n_bytes = BigIntHelper.bigIntToUByteArray(n);
+		ubyte[] d_e_bytes = BigIntHelper.bigIntToUByteArray(d_e);
+		
+		ubyte[] buffer = new ubyte[4];
+		
+		buffer.write!int(cast(int)n_bytes.length, 0);
+		buffer ~= n_bytes;
+		buffer ~= d_e_bytes;
+		
+		return Base64.encode(buffer);
+	}
+	
+	static void decodeKey(string key, out BigInt n, out BigInt d_e)
+	{
+		ubyte[] buffer = Base64.decode(key);
+		int n_len = buffer.peek!int(0);
+		ubyte[] n_bytes = buffer[4..4 + n_len];
+		ubyte[] d_e_bytes = buffer[4 + n_len..$];
+		
+		n = BigIntHelper.bigIntFromUByteArray(n_bytes);
+		d_e = BigIntHelper.bigIntFromUByteArray(d_e_bytes);
+	}
+}
+
+class PKCS1 : iPKCS
+{
+	static string encodeKey(BigInt n, BigInt d_e)
+	{
+		return string.init;
+	}
+	
+	static void decodeKey(string key, out BigInt n, out BigInt d_e)
+	{
+	}
+}
+
+class PKCS8 : iPKCS
+{
+	static string encodeKey(BigInt n, BigInt d_e)
+	{
+		return string.init;
+	}
+	
+	static void decodeKey(string key, out BigInt n, out BigInt d_e)
+	{
+	}
+}
+
