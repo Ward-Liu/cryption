@@ -58,12 +58,12 @@ public:
 
 		while (true)
 		{
-			p = randomBigInt(bitLength / 2, 1, 1);
+			p = generateRandomBigInt(bitLength / 2, 1, 1);
 			if (isProbablePrime(p)) break;
 		}
 		while (true)
 		{
-			q = randomBigInt(bitLength / 2, 1, 1);
+			q = generateRandomBigInt(bitLength / 2, 1, 1);
 			if (isProbablePrime(q)) break;
 		}
 		n = p * q;
@@ -75,30 +75,30 @@ public:
         return RSAKeyPair(encodeKey(n, d), encodeKey(n, e));
     }
 
-	static string encodeKey(T : iPKCS = SimpleFormat)(BigInt n, BigInt d_e)
+	static string encodeKey(T : iPKCS = SimpleFormat)(BigInt modulus, BigInt exponent)
 	{
-		return T.encodeKey(n, d_e);
+		return T.encodeKey(modulus, exponent);
 	}
 	
-	static void decodeKey(T : iPKCS = SimpleFormat)(string key, out BigInt n, out BigInt d_e)
+	static void decodeKey(T : iPKCS = SimpleFormat)(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
 	{
-		T.decodeKey(key, n, d_e);
+		T.decodeKey(key, modulus, exponent, modulus_bytes, exponent_bytes);
 	}
 
-	static ubyte[] encrypt()
+	static ubyte[] encrypt(string key, ubyte[] data)
 	{
-		return null;
+		return encrypt_decrypt!"encrypt"(key, data);
 	}
-	
-	static ubyte[] decrypt()
+
+	static ubyte[] decrypt(string key, ubyte[] data)
 	{
-		return null;
+		return encrypt_decrypt!"decrypt"(key, data);
 	}
 
 private:
 	static RandomGenerator rnd;
 
-	static BigInt randomBigInt(uint bitLength, int highBit = -1, int lowBit = -1)
+	static BigInt generateRandomBigInt(uint bitLength, int highBit = -1, int lowBit = -1)
 	{
 		ubyte[] buffer = new ubyte[bitLength / 8];
 
@@ -168,6 +168,71 @@ private:
 	    return true;
 	}
 
+	static ubyte[] encrypt_decrypt(string T = "encrypt")(string key, ubyte[] data)
+	{
+		assert(T == "encrypt" || T == "decrypt");
+		
+		BigInt modulus, exponent;
+		ubyte[] modulus_bytes, exponent_bytes;
+		decodeKey(key, modulus, exponent, modulus_bytes, exponent_bytes);
+		
+		size_t keySize = modulus_bytes.length;
+
+		BigInt getNextBlock(out size_t blockSize)
+		{
+			if (data.length == 0)
+			{
+				blockSize = 0;
+				return BigInt("0");
+			}
+
+			if (T == "decrypt")
+			{
+				ubyte[] block = data[0..$ >= keySize ? keySize : $];
+				blockSize = block.length;
+				return BigIntHelper.bigIntFromUByteArray(block);
+			}
+			else
+			{
+				blockSize = keySize -11;
+				blockSize = blockSize <= data.length ? blockSize : data.length;
+				while (true)
+				{
+					ubyte[] block = data[0..blockSize];
+					BigInt t = BigIntHelper.bigIntFromUByteArray(block);
+					if (t >= modulus)
+					{
+						blockSize--;
+						assert(blockSize > 0, "Key bits is too small.");
+						continue;
+					}
+					return t;
+				}
+			}
+		}
+
+		ubyte[] ret;
+		
+		while (data.length > 0)
+		{
+			size_t blockSize;
+			BigInt block = getNextBlock(blockSize);
+			if (blockSize == 0) break;
+
+			block = BigIntHelper.powMod(block, modulus, exponent);
+			ubyte[] block_buf = BigIntHelper.bigIntToUByteArray(block);
+			if (T == "encrypt")
+			{
+				for (size_t i; i < keySize - block_buf.length; i++)
+					ret ~= cast(ubyte)0;
+			}
+			ret ~= block_buf;
+			data = data[blockSize..$];
+		} 
+		
+		return ret;
+	}
+	
 	immutable static size_t PRIME_TABLE_SIZE = 6543;
 	immutable static uint[PRIME_TABLE_SIZE] PRIMES = [
 	    2,	3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
@@ -806,58 +871,58 @@ private:
 
 interface iPKCS
 {
-	static string encodeKey(BigInt n, BigInt d_e);
-	static void decodeKey(string key, out BigInt n, out BigInt d_e);
+	static string encodeKey(BigInt modulus, BigInt exponent);
+	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes);
 }
 
 class SimpleFormat : iPKCS
 {
-	static string encodeKey(BigInt n, BigInt d_e)
+	static string encodeKey(BigInt modulus, BigInt exponent)
 	{
-		ubyte[] n_bytes = BigIntHelper.bigIntToUByteArray(n);
-		ubyte[] d_e_bytes = BigIntHelper.bigIntToUByteArray(d_e);
+		ubyte[] m_bytes = BigIntHelper.bigIntToUByteArray(modulus);
+		ubyte[] e_bytes = BigIntHelper.bigIntToUByteArray(exponent);
 		
 		ubyte[] buffer = new ubyte[4];
 		
-		buffer.write!int(cast(int)n_bytes.length, 0);
-		buffer ~= n_bytes;
-		buffer ~= d_e_bytes;
+		buffer.write!int(cast(int)m_bytes.length, 0);
+		buffer ~= m_bytes;
+		buffer ~= e_bytes;
 		
 		return Base64.encode(buffer);
 	}
 	
-	static void decodeKey(string key, out BigInt n, out BigInt d_e)
+	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
 	{
 		ubyte[] buffer = Base64.decode(key);
-		int n_len = buffer.peek!int(0);
-		ubyte[] n_bytes = buffer[4..4 + n_len];
-		ubyte[] d_e_bytes = buffer[4 + n_len..$];
+		int m_len = buffer.peek!int(0);
+		modulus_bytes = buffer[4..4 + m_len];
+		exponent_bytes = buffer[4 + m_len..$];
 		
-		n = BigIntHelper.bigIntFromUByteArray(n_bytes);
-		d_e = BigIntHelper.bigIntFromUByteArray(d_e_bytes);
+		modulus = BigIntHelper.bigIntFromUByteArray(modulus_bytes);
+		exponent = BigIntHelper.bigIntFromUByteArray(exponent_bytes);
 	}
 }
 
 class PKCS1 : iPKCS
 {
-	static string encodeKey(BigInt n, BigInt d_e)
+	static string encodeKey(BigInt modulus, BigInt exponent)
 	{
 		return string.init;
 	}
 	
-	static void decodeKey(string key, out BigInt n, out BigInt d_e)
+	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
 	{
 	}
 }
 
 class PKCS8 : iPKCS
 {
-	static string encodeKey(BigInt n, BigInt d_e)
+	static string encodeKey(BigInt modulus, BigInt exponent)
 	{
 		return string.init;
 	}
 	
-	static void decodeKey(string key, out BigInt n, out BigInt d_e)
+	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
 	{
 	}
 }
