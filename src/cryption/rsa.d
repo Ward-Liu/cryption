@@ -926,3 +926,27 @@ class PKCS8 : iPKCS
 	}
 }
 
+unittest
+{
+	import std.stdio;
+	
+    RSAKeyPair keyPair = RSA.generateKeyPair(1024);
+    writeln(keyPair.privateKey);
+    writeln(keyPair.publicKey);
+
+    string data = `
+And the workload proves (POW) reusable workload proof (RPOW) 2. hash function
+The hash function (Hash Function), also known as a hash function, gives an input x, which calculates the corresponding output H (x). The main features of a hash function are:
+The input x can be a string of any length
+The output, that is, the length of H (x) is fixed
+
+The procedure for calculating H (x) is efficient (for string X of length n), the time complexity of H (x) should be O (n)
+For bitcoin, the hash function used by such cryptographic systems, it needs to have the following properties:
+	`;
+    
+    ubyte[] sb = cast(ubyte[])data;
+    ubyte[] db = RSA.encrypt(keyPair.privateKey, sb);
+    sb = RSA.decrypt(keyPair.publicKey, db);
+    writeln(cast(string)sb);
+}
+
