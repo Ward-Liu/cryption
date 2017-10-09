@@ -194,8 +194,7 @@ private:
 			}
 			else
 			{
-				blockSize = keySize -11;
-				blockSize = blockSize <= data.length ? blockSize : data.length;
+				blockSize = keySize <= data.length ? keySize : data.length;
 				while (true)
 				{
 					ubyte[] block = data[0..blockSize];
