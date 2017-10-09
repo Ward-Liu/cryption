@@ -150,28 +150,13 @@ private:
 	
 	static bool millerRabinPrimeTest(BigInt n)
 	{
-	    BigInt pow_mod(BigInt a, BigInt b, BigInt c)
-	    {
-	        if (b == 0)
-	            return BigInt("1");
-	        if (b == 1)
-	            return a % c;
-	
-	        BigInt temp = pow_mod(a, b / 2, c);
-	        temp = temp * temp % c;
-	        if (b & 1)
-	            temp *= a;
-	        temp %= c;
-	        return temp;
-	    }
-	
 	    int s = 40;
 	    BigInt a;
 	
 	    for (int i = 0; i < s; i++)
 	    {
 	        a = rnd.next % (n - 2) + 2;
-	        if (pow_mod(a, n - 1, n) != 1)
+	        if (BigIntHelper.powMod(a, n, n - 1) != 1)
 	            return false;
 	    }
 	
@@ -186,7 +171,7 @@ private:
 		ubyte[] modulus_bytes, exponent_bytes;
 		decodeKey(key, modulus, exponent, modulus_bytes, exponent_bytes);
 		
-		return encrypt_decrypt(modulus, exponent, modulus_bytes, exponent_bytes, data);
+		return encrypt_decrypt!T(modulus, exponent, modulus_bytes, exponent_bytes, data);
 	}
 	
 	static ubyte[] encrypt_decrypt(string T = "encrypt")(BigInt modulus, BigInt exponent, ubyte[] modulus_bytes, ubyte[] exponent_bytes, ubyte[] data)
