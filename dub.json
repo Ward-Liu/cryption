@@ -1,8 +1,8 @@
 {
 	"authors": ["Shove"],
 	"name": "cryption",
-	"description": "A D Library of encryption, decryption(AES, TEA, RSA...), encode, hash, and message digital signatures.",
-	"version": "0.0.9",
+	"description": "A D Library of encryption, decryption(3DES, AES, TEA, RSA...), encode, hash, and message digital signatures.",
+	"version": "0.0.10",
 	"license": "Apache License, Version 2.0",
 	"copyright": "Copyright © 2017, Shove",
 	"targetName": "cryption",

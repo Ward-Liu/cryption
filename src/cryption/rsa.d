@@ -90,9 +90,19 @@ public:
 		return encrypt_decrypt!"encrypt"(key, data);
 	}
 
+	static ubyte[] encrypt(BigInt modulus, BigInt exponent, ubyte[] modulus_bytes, ubyte[] exponent_bytes, ubyte[] data)
+	{
+		return encrypt_decrypt!"encrypt"(modulus, exponent, modulus_bytes, exponent_bytes, data);
+	}
+
 	static ubyte[] decrypt(string key, ubyte[] data)
 	{
 		return encrypt_decrypt!"decrypt"(key, data);
+	}
+
+	static ubyte[] decrypt(BigInt modulus, BigInt exponent, ubyte[] modulus_bytes, ubyte[] exponent_bytes, ubyte[] data)
+	{
+		return encrypt_decrypt!"decrypt"(modulus, exponent, modulus_bytes, exponent_bytes, data);
 	}
 
 private:
@@ -175,6 +185,13 @@ private:
 		BigInt modulus, exponent;
 		ubyte[] modulus_bytes, exponent_bytes;
 		decodeKey(key, modulus, exponent, modulus_bytes, exponent_bytes);
+		
+		return encrypt_decrypt(modulus, exponent, modulus_bytes, exponent_bytes, data);
+	}
+	
+	static ubyte[] encrypt_decrypt(string T = "encrypt")(BigInt modulus, BigInt exponent, ubyte[] modulus_bytes, ubyte[] exponent_bytes, ubyte[] data)
+	{
+		assert(T == "encrypt" || T == "decrypt");
 		
 		size_t keySize = modulus_bytes.length;
 
@@ -929,6 +946,8 @@ class PKCS8 : iPKCS
 unittest
 {
 	import std.stdio;
+
+	import cryption.rsa;
 	
     RSAKeyPair keyPair = RSA.generateKeyPair(1024);
     writeln(keyPair.privateKey);
@@ -950,3 +969,37 @@ For bitcoin, the hash function used by such cryptographic systems, it needs to h
     writeln(cast(string)sb);
 }
 
+unittest
+{
+	import std.stdio;
+	
+	import std.bigint;
+	import cryption.rsa;
+	
+	RSAKeyPair keyPair = RSA.generateKeyPair(1024);
+    writeln(keyPair.privateKey);
+    writeln(keyPair.publicKey);
+    
+    BigInt pri_modulus, pri_exponent;
+	ubyte[] pri_modulus_bytes, pri_exponent_bytes;
+	RSA.decodeKey(keyPair.privateKey, pri_modulus, pri_exponent, pri_modulus_bytes, pri_exponent_bytes);
+
+    BigInt pub_modulus, pub_exponent;
+	ubyte[] pub_modulus_bytes, pub_exponent_bytes;
+	RSA.decodeKey(keyPair.publicKey, pub_modulus, pub_exponent, pub_modulus_bytes, pub_exponent_bytes);
+
+    string data = `
+And the workload proves (POW) reusable workload proof (RPOW) 2. hash function
+The hash function (Hash Function), also known as a hash function, gives an input x, which calculates the corresponding output H (x). The main features of a hash function are:
+The input x can be a string of any length
+The output, that is, the length of H (x) is fixed
+
+The procedure for calculating H (x) is efficient (for string X of length n), the time complexity of H (x) should be O (n)
+For bitcoin, the hash function used by such cryptographic systems, it needs to have the following properties:
+	`;
+    
+    ubyte[] sb = cast(ubyte[])data;
+    ubyte[] db = RSA.encrypt(pri_modulus, pri_exponent, pri_modulus_bytes, pri_exponent_bytes, sb);
+    sb = RSA.decrypt(pub_modulus, pub_exponent, pub_modulus_bytes, pub_exponent_bytes, db);
+    writeln(cast(string)sb);
+}
