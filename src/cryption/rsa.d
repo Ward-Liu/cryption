@@ -4,6 +4,7 @@ import std.bigint;
 import std.bitmanip;
 import std.datetime;
 import std.base64;
+import std.typecons;
 
 import cryption.utils;
 
@@ -17,6 +18,44 @@ struct RSAKeyPair
 		this.privateKey = privateKey;
 		this.publicKey = publicKey;
 	}
+}
+
+struct RSAKeyInfo
+{
+	@property BigInt modulus()
+	{
+		return _modulus;
+	}
+	
+	@property ubyte[] modulus_bytes()
+	{
+		return _modulus_bytes;
+	}
+	
+	@property BigInt exponent()
+	{
+		return _exponent;
+	}
+	
+	@property ubyte[] exponent_bytes()
+	{
+		return _exponent_bytes;
+	}
+	
+	this(BigInt modulus, ubyte[] modulus_bytes, BigInt exponent, ubyte[] exponent_bytes)
+	{
+		_modulus = modulus;
+		_modulus_bytes = modulus_bytes;
+		_exponent = exponent;
+		_exponent_bytes = exponent_bytes;
+	}
+	
+private:
+
+	BigInt _modulus;
+	ubyte[] _modulus_bytes;
+	BigInt _exponent;
+	ubyte[] _exponent_bytes;
 }
 
 class RSA
@@ -80,29 +119,29 @@ public:
 		return T.encodeKey(modulus, exponent);
 	}
 	
-	static void decodeKey(T : iPKCS = SimpleFormat)(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
+	static RSAKeyInfo decodeKey(T : iPKCS = SimpleFormat)(string key)
 	{
-		T.decodeKey(key, modulus, exponent, modulus_bytes, exponent_bytes);
+		return T.decodeKey(key);
 	}
 
-	static ubyte[] encrypt(string key, ubyte[] data)
+	static ubyte[] encrypt(T : iPKCS = SimpleFormat)(string key, ubyte[] data)
+	{
+		return encrypt_decrypt!("encrypt", T)(key, data);
+	}
+
+	static ubyte[] encrypt(RSAKeyInfo key, ubyte[] data)
 	{
 		return encrypt_decrypt!"encrypt"(key, data);
 	}
 
-	static ubyte[] encrypt(BigInt modulus, BigInt exponent, ubyte[] modulus_bytes, ubyte[] exponent_bytes, ubyte[] data)
+	static ubyte[] decrypt(T : iPKCS = SimpleFormat)(string key, ubyte[] data)
 	{
-		return encrypt_decrypt!"encrypt"(modulus, exponent, modulus_bytes, exponent_bytes, data);
+		return encrypt_decrypt!("decrypt", T)(key, data);
 	}
 
-	static ubyte[] decrypt(string key, ubyte[] data)
+	static ubyte[] decrypt(RSAKeyInfo key, ubyte[] data)
 	{
 		return encrypt_decrypt!"decrypt"(key, data);
-	}
-
-	static ubyte[] decrypt(BigInt modulus, BigInt exponent, ubyte[] modulus_bytes, ubyte[] exponent_bytes, ubyte[] data)
-	{
-		return encrypt_decrypt!"decrypt"(modulus, exponent, modulus_bytes, exponent_bytes, data);
 	}
 
 private:
@@ -163,22 +202,19 @@ private:
 	    return true;
 	}
 
-	static ubyte[] encrypt_decrypt(string T = "encrypt")(string key, ubyte[] data)
+	static ubyte[] encrypt_decrypt(string T1 = "encrypt", T2 : iPKCS = SimpleFormat)(string key, ubyte[] data)
 	{
-		assert(T == "encrypt" || T == "decrypt");
+		assert(T1 == "encrypt" || T1 == "decrypt");
 		
-		BigInt modulus, exponent;
-		ubyte[] modulus_bytes, exponent_bytes;
-		decodeKey(key, modulus, exponent, modulus_bytes, exponent_bytes);
-		
-		return encrypt_decrypt!T(modulus, exponent, modulus_bytes, exponent_bytes, data);
+		RSAKeyInfo ki = decodeKey!T2(key);
+		return encrypt_decrypt!(T1)(ki, data);
 	}
 	
-	static ubyte[] encrypt_decrypt(string T = "encrypt")(BigInt modulus, BigInt exponent, ubyte[] modulus_bytes, ubyte[] exponent_bytes, ubyte[] data)
+	static ubyte[] encrypt_decrypt(string T = "encrypt")(RSAKeyInfo key, ubyte[] data)
 	{
 		assert(T == "encrypt" || T == "decrypt");
 		
-		size_t keySize = modulus_bytes.length;
+		size_t keySize = key.modulus_bytes.length;
 
 		BigInt getNextBlock(out size_t blockSize)
 		{
@@ -201,7 +237,7 @@ private:
 				{
 					ubyte[] block = data[0..blockSize];
 					BigInt t = BigIntHelper.bigIntFromUByteArray(block);
-					if (t >= modulus)
+					if (t >= key.modulus)
 					{
 						blockSize--;
 						assert(blockSize > 0, "Key bits is too small.");
@@ -220,7 +256,7 @@ private:
 			BigInt block = getNextBlock(blockSize);
 			if (blockSize == 0) break;
 
-			block = BigIntHelper.powMod(block, modulus, exponent);
+			block = BigIntHelper.powMod(block, key.modulus, key.exponent);
 			ubyte[] block_buf = BigIntHelper.bigIntToUByteArray(block);
 			if (T == "encrypt")
 			{
@@ -873,7 +909,7 @@ private:
 interface iPKCS
 {
 	static string encodeKey(BigInt modulus, BigInt exponent);
-	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes);
+	static Nullable!RSAKeyInfo decodeKey(string key);
 }
 
 class SimpleFormat : iPKCS
@@ -892,15 +928,17 @@ class SimpleFormat : iPKCS
 		return Base64.encode(buffer);
 	}
 	
-	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
+	static Nullable!RSAKeyInfo decodeKey(string key)
 	{
 		ubyte[] buffer = Base64.decode(key);
 		int m_len = buffer.peek!int(0);
-		modulus_bytes = buffer[4..4 + m_len];
-		exponent_bytes = buffer[4 + m_len..$];
+		ubyte[] modulus_bytes = buffer[4..4 + m_len];
+		ubyte[] exponent_bytes = buffer[4 + m_len..$];
 		
-		modulus = BigIntHelper.bigIntFromUByteArray(modulus_bytes);
-		exponent = BigIntHelper.bigIntFromUByteArray(exponent_bytes);
+		return Nullable!RSAKeyInfo(RSAKeyInfo(
+			BigIntHelper.bigIntFromUByteArray(modulus_bytes),	modulus_bytes,
+			BigIntHelper.bigIntFromUByteArray(exponent_bytes),	exponent_bytes
+		));
 	}
 }
 
@@ -911,8 +949,9 @@ class PKCS1 : iPKCS
 		return string.init;
 	}
 	
-	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
+	static Nullable!RSAKeyInfo decodeKey(string key)
 	{
+		return Nullable!RSAKeyInfo();
 	}
 }
 
@@ -923,8 +962,9 @@ class PKCS8 : iPKCS
 		return string.init;
 	}
 	
-	static void decodeKey(string key, out BigInt modulus, out BigInt exponent, out ubyte[] modulus_bytes, out ubyte[] exponent_bytes)
+	static Nullable!RSAKeyInfo decodeKey(string key)
 	{
+		return Nullable!RSAKeyInfo();
 	}
 }
 
@@ -965,13 +1005,8 @@ unittest
     writeln(keyPair.privateKey);
     writeln(keyPair.publicKey);
     
-    BigInt pri_modulus, pri_exponent;
-	ubyte[] pri_modulus_bytes, pri_exponent_bytes;
-	RSA.decodeKey(keyPair.privateKey, pri_modulus, pri_exponent, pri_modulus_bytes, pri_exponent_bytes);
-
-    BigInt pub_modulus, pub_exponent;
-	ubyte[] pub_modulus_bytes, pub_exponent_bytes;
-	RSA.decodeKey(keyPair.publicKey, pub_modulus, pub_exponent, pub_modulus_bytes, pub_exponent_bytes);
+	RSAKeyInfo pri_key = RSA.decodeKey(keyPair.privateKey);
+	RSAKeyInfo pub_key = RSA.decodeKey(keyPair.publicKey);
 
     string data = `
 And the workload proves (POW) reusable workload proof (RPOW) 2. hash function
@@ -984,7 +1019,7 @@ For bitcoin, the hash function used by such cryptographic systems, it needs to h
 	`;
     
     ubyte[] sb = cast(ubyte[])data;
-    ubyte[] db = RSA.encrypt(pri_modulus, pri_exponent, pri_modulus_bytes, pri_exponent_bytes, sb);
-    sb = RSA.decrypt(pub_modulus, pub_exponent, pub_modulus_bytes, pub_exponent_bytes, db);
+    ubyte[] db = RSA.encrypt(pri_key, sb);
+    sb = RSA.decrypt(pub_key, db);
     writeln(cast(string)sb);
 }
