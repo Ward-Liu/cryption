@@ -49,14 +49,14 @@ struct BigIntHelper
             {
                 result = (result * temp) % modulus;
             }
-            
+
             temp = (temp * temp) % modulus;
             exponent /= 2;
         }
-        
+
         return result;
     }
-    
+
     /*
     /// recursion
     static BigInt powMod(BigInt base, BigInt modulus, BigInt exponent)
