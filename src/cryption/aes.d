@@ -1,74 +1,15 @@
 module cryption.aes;
 
-class AES128 : AES!(4, 4, 10)
+import std.conv : to;
+
+alias AES128 = AES!(4, 4, 10);
+alias AES192 = AES!(4, 6, 12);
+alias AES256 = AES!(4, 8, 14);
+
+class AES(uint Nb, uint Nk, uint Nr)
+if ((Nb == 4 && Nk == 4 && Nr == 10) ||  (Nb == 4 && Nk == 6 && Nr == 12) || (Nb == 4 && Nk == 8 && Nr == 14))
 {
-    this(ubyte[] key) { super(key); }
-
-    unittest
-    {
-        auto key     = cast(ubyte[]) x"000102030405060708090a0b0c0d0e0f";
-        auto message = cast(ubyte[]) x"00112233445566778899aabbccddeeff";
-        auto cipher  = cast(ubyte[]) x"69c4e0d86a7b0430d8cdb78070b4c55a";
-        ubyte[] buffer = message.dup;
-
-        auto aes = new AES128(key);
-
-        aes.encrypt(buffer);
-        assert(buffer == cipher);
-
-        aes.decrypt(buffer);
-        assert(buffer == message);
-    }
-}
-
-class AES192 : AES!(4, 6, 12)
-{
-    this(ubyte[] key) { super(key); }
-
-    unittest
-    {
-        auto message = cast(ubyte[16]) x"00112233445566778899aabbccddeeff";
-        auto key     = cast(ubyte[24]) x"000102030405060708090a0b0c0d0e0f1011121314151617";
-        auto cipher  = cast(ubyte[16]) x"dda97ca4864cdfe06eaf70a0ec0d7191";
-        ubyte[] buffer = message.dup;
-
-        auto aes = new AES192(key);
-
-        aes.encrypt(buffer);
-        assert(buffer == cipher);
-
-        aes.decrypt(buffer);
-        assert(buffer == message);
-    }
-}
-
-class AES256 : AES!(4, 8, 14)
-{
-    this(ubyte[] key) { super(key); }
-
-    unittest
-    {
-        auto message = cast(ubyte[16]) x"00112233445566778899aabbccddeeff";
-        auto key     = cast(ubyte[32]) x"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
-        auto cipher  = cast(ubyte[16]) x"8ea2b7ca516745bfeafc49904b496089";
-        ubyte[] buffer = message.dup;
-
-        auto aes = new AES256(key);
-
-        aes.encrypt(buffer);
-        assert(buffer == cipher);
-
-        aes.decrypt(buffer);
-        assert(buffer == message);
-    }
-}
-
-abstract class AES(uint Nb, uint Nk, uint Nr)
-if ((Nb == 4 && Nk == 4 && Nr == 10) || 
-    (Nb == 4 && Nk == 6 && Nr == 12) ||
-    (Nb == 4 && Nk == 8 && Nr == 14))
-{
-    static const ubyte[] sbox = [
+    private static const ubyte[] sbox = [
         0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
         0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
         0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -87,7 +28,7 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
     ];
 
-    static const ubyte[] isbox = [
+    private static const ubyte[] isbox = [
         0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
         0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
         0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
@@ -106,7 +47,7 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
     ];
 
-    static const uint[] t1 = [
+    private static const uint[] t1 = [
         0xa56363c6, 0x847c7cf8, 0x997777ee, 0x8d7b7bf6, 0x0df2f2ff, 0xbd6b6bd6, 0xb16f6fde, 0x54c5c591,
         0x50303060, 0x03010102, 0xa96767ce, 0x7d2b2b56, 0x19fefee7, 0x62d7d7b5, 0xe6abab4d, 0x9a7676ec,
         0x45caca8f, 0x9d82821f, 0x40c9c989, 0x877d7dfa, 0x15fafaef, 0xeb5959b2, 0xc947478e, 0x0bf0f0fb,
@@ -141,7 +82,7 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         0xc3414182, 0xb0999929, 0x772d2d5a, 0x110f0f1e, 0xcbb0b07b, 0xfc5454a8, 0xd6bbbb6d, 0x3a16162c,
     ];
 
-    static const uint[] t2 = [
+    private static const uint[] t2 = [
         0x6363c6a5, 0x7c7cf884, 0x7777ee99, 0x7b7bf68d, 0xf2f2ff0d, 0x6b6bd6bd, 0x6f6fdeb1, 0xc5c59154,
         0x30306050, 0x01010203, 0x6767cea9, 0x2b2b567d, 0xfefee719, 0xd7d7b562, 0xabab4de6, 0x7676ec9a,
         0xcaca8f45, 0x82821f9d, 0xc9c98940, 0x7d7dfa87, 0xfafaef15, 0x5959b2eb, 0x47478ec9, 0xf0f0fb0b,
@@ -176,7 +117,7 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         0x414182c3, 0x999929b0, 0x2d2d5a77, 0x0f0f1e11, 0xb0b07bcb, 0x5454a8fc, 0xbbbb6dd6, 0x16162c3a,
     ];
 
-    static const uint[] t3 = [
+    private static const uint[] t3 = [
         0x63c6a563, 0x7cf8847c, 0x77ee9977, 0x7bf68d7b, 0xf2ff0df2, 0x6bd6bd6b, 0x6fdeb16f, 0xc59154c5,
         0x30605030, 0x01020301, 0x67cea967, 0x2b567d2b, 0xfee719fe, 0xd7b562d7, 0xab4de6ab, 0x76ec9a76,
         0xca8f45ca, 0x821f9d82, 0xc98940c9, 0x7dfa877d, 0xfaef15fa, 0x59b2eb59, 0x478ec947, 0xf0fb0bf0,
@@ -211,7 +152,7 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         0x4182c341, 0x9929b099, 0x2d5a772d, 0x0f1e110f, 0xb07bcbb0, 0x54a8fc54, 0xbb6dd6bb, 0x162c3a16,
     ];
 
-    static const uint[] t4 = [
+    private static const uint[] t4 = [
         0xc6a56363, 0xf8847c7c, 0xee997777, 0xf68d7b7b, 0xff0df2f2, 0xd6bd6b6b, 0xdeb16f6f, 0x9154c5c5,
         0x60503030, 0x02030101, 0xcea96767, 0x567d2b2b, 0xe719fefe, 0xb562d7d7, 0x4de6abab, 0xec9a7676,
         0x8f45caca, 0x1f9d8282, 0x8940c9c9, 0xfa877d7d, 0xef15fafa, 0xb2eb5959, 0x8ec94747, 0xfb0bf0f0,
@@ -246,7 +187,7 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         0x82c34141, 0x29b09999, 0x5a772d2d, 0x1e110f0f, 0x7bcbb0b0, 0xa8fc5454, 0x6dd6bbbb, 0x2c3a1616,
     ];
 
-    static const uint[] it = [
+    private static const uint[] it = [
         0x50a7f451, 0x5365417e, 0xc3a4171a, 0x965e273a, 0xcb6bab3b, 0xf1459d1f, 0xab58faac, 0x9303e34b,
         0x55fa3020, 0xf66d76ad, 0x9176cc88, 0x254c02f5, 0xfcd7e54f, 0xd7cb2ac5, 0x80443526, 0x8fa362b5,
         0x495ab1de, 0x671bba25, 0x980eea45, 0xe1c0fe5d, 0x02752fc3, 0x12f04c81, 0xa397468d, 0xc6f9d36b,
@@ -281,23 +222,22 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         0x7101a839, 0xdeb30c08, 0x9ce4b4d8, 0x90c15664, 0x6184cb7b, 0x70b632d5, 0x745c6c48, 0x4257b8d0,
     ];
 
-    uint[] state;
-    uint[Nb*(Nr+1)] w;
-    uint[Nb*(Nr+1)] dw;
+    private uint[] state;
+    private uint[Nb*(Nr+1)] w;
+    private uint[Nb*(Nr+1)] dw;
 
     public this(ubyte[] k)
     {
-        keyExpansion( k );
+        keyExpansion(k);
     }
 
-    public void encrypt(ubyte[] message)
+    public ubyte[] encrypt(in ubyte[] buffer)
     {
-        uint *stateptr = cast(uint*)message; 
+    	ubyte[] message = buffer.dup;
+        uint *stateptr = cast(uint*)message;
         state = stateptr[0 .. Nb];
         uint[Nb] t;
         uint round = 0;
-
-        //printHexInt(0, "input", state);
 
         // Add initial round key
         state[0] ^= w[0];
@@ -305,9 +245,6 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         state[2] ^= w[2];
         state[3] ^= w[3];
         t = state[0 .. Nb];
-
-        //printHexInt(0, "k_sch", w[0 .. Nb]);
-        //printHexInt(1, "start", state);
 
         while (round++ < Nr - 1)
         {
@@ -317,9 +254,6 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
             state[2] = t1[cast(ubyte)(t[2])] ^ t2[cast(ubyte)(t[3] >> 8)] ^ t3[cast(ubyte)(t[0] >> 16)] ^ t4[cast(ubyte)(t[1] >> 24)] ^ w[round*Nb+2];
             state[3] = t1[cast(ubyte)(t[3])] ^ t2[cast(ubyte)(t[0] >> 8)] ^ t3[cast(ubyte)(t[1] >> 16)] ^ t4[cast(ubyte)(t[2] >> 24)] ^ w[round*Nb+3];
             t[] = state[0 .. Nb];
-
-            //printHexInt(round, "k_sch", w[round*Nb .. (round+1)*Nb]);
-            //printHexInt(round+1, "start", state);
         }
 
         // SubBytes and ShiftRows
@@ -327,19 +261,16 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         state[1] = sbox[cast(ubyte)(t[1])] ^ ((sbox[cast(ubyte)(t[2] >> 8)]) << 8) ^ ((sbox[cast(ubyte)(t[3] >> 16)]) << 16) ^ ((sbox[cast(ubyte)(t[0] >> 24)]) << 24) ^ w[round*Nb+1];
         state[2] = sbox[cast(ubyte)(t[2])] ^ ((sbox[cast(ubyte)(t[3] >> 8)]) << 8) ^ ((sbox[cast(ubyte)(t[0] >> 16)]) << 16) ^ ((sbox[cast(ubyte)(t[1] >> 24)]) << 24) ^ w[round*Nb+2];
         state[3] = sbox[cast(ubyte)(t[3])] ^ ((sbox[cast(ubyte)(t[0] >> 8)]) << 8) ^ ((sbox[cast(ubyte)(t[1] >> 16)]) << 16) ^ ((sbox[cast(ubyte)(t[2] >> 24)]) << 24) ^ w[round*Nb+3];
-
-        //printHexInt(round, "k_sch", dw[Nr*Nb .. (Nr+1)*Nb]);
-        //printHex(round, "out", state);
+    
+	    return message;
     }
 
-    public void decrypt(ubyte[] cipher)
+    public ubyte[] decrypt(in ubyte[] buffer)
     {
+    	ubyte[] cipher = buffer.dup;
         uint *stateptr = cast(uint*)cipher; 
         state = stateptr[0 .. Nb];
         uint[4] t;
-
-        //printHexInt(0, "iinput", state);
-        //printHexInt(0, "ik_sch", dw[Nr*Nb .. (Nr+1)*Nb]);
 
         // Add last round key
         state[0] ^= dw[Nr*Nb];
@@ -347,8 +278,6 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         state[2] ^= dw[Nr*Nb+2];
         state[3] ^= dw[Nr*Nb+3];
         t[] = state[0 .. Nb];
-
-        //printHexInt(1, "istart", state);
 
         for (int round = Nr - 1; round > 0; --round)
         {
@@ -358,9 +287,6 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
             state[2] = it[cast(ubyte)(t[2])] ^ rotate!1(it[cast(ubyte)(t[1] >> 8)]) ^ rotate!2(it[cast(ubyte)(t[0] >> 16)]) ^ rotate!3(it[cast(ubyte)(t[3] >> 24)]) ^ dw[round*Nb+2];
             state[3] = it[cast(ubyte)(t[3])] ^ rotate!1(it[cast(ubyte)(t[2] >> 8)]) ^ rotate!2(it[cast(ubyte)(t[1] >> 16)]) ^ rotate!3(it[cast(ubyte)(t[0] >> 24)]) ^ dw[round*Nb+3];
             t[] = state[0 .. Nb];
-
-            //printHexInt(Nr - round, "ik_sch", dw[round*Nb .. (round+1)*Nb]);
-            //printHexInt(Nr - round + 1, "istart", state);
         }
 
         // InvSubBytes and InvShiftRows combined
@@ -368,9 +294,8 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         state[1] = isbox[cast(ubyte)(t[1])] ^ ((isbox[cast(ubyte)(t[0] >> 8)]) << 8) ^ ((isbox[cast(ubyte)(t[3] >> 16)]) << 16) ^ ((isbox[cast(ubyte)(t[2] >> 24)]) << 24) ^ dw[1];
         state[2] = isbox[cast(ubyte)(t[2])] ^ ((isbox[cast(ubyte)(t[1] >> 8)]) << 8) ^ ((isbox[cast(ubyte)(t[0] >> 16)]) << 16) ^ ((isbox[cast(ubyte)(t[3] >> 24)]) << 24) ^ dw[2];
         state[3] = isbox[cast(ubyte)(t[3])] ^ ((isbox[cast(ubyte)(t[2] >> 8)]) << 8) ^ ((isbox[cast(ubyte)(t[1] >> 16)]) << 16) ^ ((isbox[cast(ubyte)(t[0] >> 24)]) << 24) ^ dw[3];
-
-        //printHexInt(10, "ik_sch", dw[0 .. Nb]);
-        //printHex(10, "iout", state);
+    
+	    return cipher;
     }
 
     private static uint rotate(uint n)(uint w)
@@ -385,11 +310,6 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
                sbox[cast(ubyte)(w >> 8)] << 8 |
                sbox[cast(ubyte)(w >> 16)] << 16 |
                sbox[cast(ubyte)(w >> 24)] << 24;
-    }
-
-    unittest
-    {
-        assert(subWord(0x73744765) == 0x8f92a04d);
     }
 
     private static uint rotWord(uint w)
@@ -414,17 +334,10 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
         }
     }
 
-    unittest 
-    {
-        uint[] c = [0xd2bae3fd, 0xd7d0e505, 0x4e964735, 0xf137fef1].dup;
-        uint[] d = [0xa3867e2d, 0x3e39d939, 0x110a57e6, 0x164e9001];
-
-        invMixColumns(c);
-        assert(c == d);
-    }
-
     private void keyExpansion(ubyte[] k)
     {
+    	assert(k.length >= Nk * 4, "At least " ~ (Nk * 4).to!string ~ " bytes long key must be set");
+    	
         static const uint[10] rCon = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
 
         uint i = 0;
@@ -455,57 +368,61 @@ if ((Nb == 4 && Nk == 4 && Nr == 10) ||
 
     @property public const size_t blockSize()
     {
-        return Nb*4;
+        return Nb * 4;
     }
 }
 
-version(unittest)
+class AESUtils
 {
-    import std.stdio, std.datetime;
+	public static ubyte[] encrypt(alias T = AES128)(in ubyte[] buffer, string key)
+	{
+		return encrypt_decrypt!(T, "encrypt")(buffer, key);
+	}
+	
+	public static ubyte[] decrypt(alias T = AES128)(in ubyte[] buffer, string key)
+	{
+		return encrypt_decrypt!(T, "decrypt")(buffer, key);
+	}
+	
+	private static ubyte[] encrypt_decrypt(alias T1 = AES128, string T2)(in ubyte[] buffer, string key)
+	{
+		ubyte[] bkey = cast(ubyte[])key;
+		
+		T1 aes = new T1(bkey);
+		
+		if (T2 == "encrypt")
+		{
+			return aes.encrypt(buffer);
+		}
+		else
+		{
+			return aes.decrypt(buffer);
+		}
+	}
+}
 
-    static void printHex(uint round, string s, ubyte[] b)
-    {
-        write("round["); write(round); write("]."~s~"\t");
-        write(byteToHexString(b));
-        writeln("");
-    }
+unittest
+{
+    auto key     = cast(ubyte[]) x"000102030405060708090a0b0c0d0e0f";
+    auto message = cast(ubyte[]) x"00112233445566778899aabbccddeeff";
+    auto cipher  = cast(ubyte[]) x"69c4e0d86a7b0430d8cdb78070b4c55a";
+    
+    auto aes = new AES128(key);
 
-    static void printHexInt(uint round, string s, uint[] b)
-    {
-        write("round["); write(round); write("]."~s~"\t");
-        for (uint i = 0; i < b.length; ++i)
-            write(wordToString(b[i]));
-        writeln("");
-    }
+    ubyte[] buffer = aes.encrypt(message);
+    assert(buffer == cipher);
 
-    static void printHex(uint round, string s, uint[] b)
-    {
-        write("round["); write(round); write("]."~s~"\t");
-        for (uint i = 0; i < b.length; ++i)
-            write(wordToString(b[i]));
-        writeln("");
-    }
+    buffer = aes.decrypt(buffer);
+    assert(buffer == message);
+}
 
-    static string wordToString(uint word) {
-        ubyte[4] ss = [cast(ubyte)(word >> 24), cast(ubyte)(word >> 16), cast(ubyte)(word >> 8), cast(ubyte)word];
-        return byteToHexString(ss);
-    }
+unittest
+{
+	string key = "12341234123412341234123412341234";	// length = 24;
+	ubyte[] message = cast(ubyte[])"123412341234123412341234123412341";
 
-    auto byteToHexString(ubyte[] s)
-    {
-        auto byteToHex = function (ubyte a) {
-            ubyte upper = (a & 0b11110000) >> 4;
-            ubyte lower = a & 0b00001111;
-            auto lookup = ["0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"];
-
-            return lookup[upper]~lookup[lower];
-        };
-        string res = ""; int i = 0;
-        foreach (b; s) {
-            res ~= byteToHex(b); i++;
-            if (i % 4 == 0) res ~= " ";
-        }
-
-        return res;
-    }
+	ubyte[] buffer = AESUtils.encrypt!AES128(message, key);
+	buffer = AESUtils.decrypt!AES128(buffer, key);
+	
+	assert(message == buffer);
 }

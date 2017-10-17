@@ -125,7 +125,7 @@ class Xtea
 	{
 		ubyte[] buf = cast(ubyte[])key;
 		int[4] bkey = [buf[0], buf[1], buf[2], buf[3]];
-		
+
 		return decrypt(input, bkey, rounds);
 	}
 
@@ -134,7 +134,7 @@ class Xtea
         auto data = input.dup;
         XTEA xeta = XTEA(key, rounds);
         xeta.Decrypt(data);
-        
+
         int orgi_len;
         orgi_len = data.peek!int(data.length - 4);
         return data[0 .. orgi_len];
