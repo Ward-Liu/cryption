@@ -97,37 +97,47 @@ package struct XTEA
 
 class Xtea
 {
-    public static ubyte[] encrypt(ubyte[] input, int[4] key, int rounds, bool autoHandleFillZero = false)
+	public static ubyte[] encrypt(ubyte[] input, string key, int rounds = 64)
+	{
+		ubyte[] buf = cast(ubyte[])key;
+		int[4] bkey = [buf[0], buf[1], buf[2], buf[3]];
+
+		return encrypt(input, bkey, rounds);
+	}
+	
+    public static ubyte[] encrypt(ubyte[] input, int[4] key, int rounds = 64)
     {
-        ubyte[] data;
-        if (autoHandleFillZero)
-        {
-            data = new ubyte[4];
-            int orgi_len = cast(int) input.length;
-            data.write!int(orgi_len, 0);
-        }
-        data ~= input.dup;
-        while (data.length % 8 != 0)
+        ubyte[] data = input.dup;
+        int orgi_len = cast(int)data.length;
+		while ((data.length + 4) % 8 != 0)
             data ~= 0;
-        data[$ - 1] = cast(ubyte)(input.length);
+            
+        ubyte[] len_buf = new ubyte[4];
+        len_buf.write!int(orgi_len, 0);
+        data ~= len_buf;
+
         XTEA xeta = XTEA(key, rounds);
         xeta.Encrypt(data);
         return data;
     }
 
-    public static ubyte[] decrypt(ubyte[] input, int[4] key, int rounds, bool autoHandleFillZero = false)
+	public static ubyte[] decrypt(ubyte[] input, string key, int rounds = 64)
+	{
+		ubyte[] buf = cast(ubyte[])key;
+		int[4] bkey = [buf[0], buf[1], buf[2], buf[3]];
+		
+		return decrypt(input, bkey, rounds);
+	}
+
+    public static ubyte[] decrypt(ubyte[] input, int[4] key, int rounds = 64)
     {
         auto data = input.dup;
         XTEA xeta = XTEA(key, rounds);
         xeta.Decrypt(data);
-        if (autoHandleFillZero)
-        {
-            int orgi_len;
-            orgi_len = data.peek!int(0);
-            return data[4 .. orgi_len + 4];
-        }
-        else
-            return data;
+        
+        int orgi_len;
+        orgi_len = data.peek!int(data.length - 4);
+        return data[0 .. orgi_len];
     }
 
     unittest

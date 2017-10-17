@@ -2,7 +2,7 @@
 	"authors": ["Shove"],
 	"name": "cryption",
 	"description": "A D Library of encryption, decryption(3DES, AES, TEA, RSA...), encode, hash, and message digital signatures.",
-	"version": "0.0.12",
+	"version": "0.0.13",
 	"license": "Apache License, Version 2.0",
 	"copyright": "Copyright © 2017, Shove",
 	"targetName": "cryption",
