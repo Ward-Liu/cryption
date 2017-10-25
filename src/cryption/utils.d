@@ -94,11 +94,12 @@ struct RandomGenerator
         generator.seed(Clock.currTime().second);
     }
 
-    uint next()
+    T next(T = uint)(T min = T.min, T max = T.max) if (is(Unqual!T == uint) || is(Unqual!T == ubyte))
     {
-        uint v = generator.front;
+        uint r = generator.front;
         generator.popFront();
 
-        return v;
+        T ret = cast(T)r;
+        return ((ret < min || ret > max) ? next!T(min, max) : ret);
     }
 }

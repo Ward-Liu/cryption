@@ -212,17 +212,15 @@ private:
     }
 
     static ubyte[] encrypt_decrypt(string T1 = "encrypt", T2 : iPKCS = SimpleFormat)(string key, ubyte[] data)
+    if (T1 == "encrypt" || T1 == "decrypt")
     {
-        assert(T1 == "encrypt" || T1 == "decrypt");
-
         RSAKeyInfo ki = decodeKey!T2(key);
         return encrypt_decrypt!(T1)(ki, data);
     }
 
     static ubyte[] encrypt_decrypt(string T = "encrypt")(RSAKeyInfo key, ubyte[] data)
+    if (T == "encrypt" || T == "decrypt")
     {
-        assert(T == "encrypt" || T == "decrypt");
-
         size_t keySize = key.modulus_bytes.length;
 
         BigInt getNextBlock(out size_t blockSize)
@@ -241,10 +239,13 @@ private:
             }
             else
             {
+                // Prevent preamble 0, and make the encryption results random
+                ubyte preamble = rnd.next!ubyte(0x01, 0xFF);
                 blockSize = keySize <= data.length ? keySize : data.length;
+
                 while (true)
                 {
-                    ubyte[] block = data[0 .. blockSize];
+                    ubyte[] block = [preamble] ~ data[0 .. blockSize];
                     BigInt t = BigIntHelper.bigIntFromUByteArray(block);
                     if (t >= key.modulus)
                     {
@@ -273,6 +274,11 @@ private:
                 for (size_t i; i < keySize - block_buf.length; i++)
                     ret ~= cast(ubyte) 0;
             }
+            else
+            {
+                block_buf = block_buf[1 .. $];
+            }
+
             ret ~= block_buf;
             data = data[blockSize .. $];
         }
