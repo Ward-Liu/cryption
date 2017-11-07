@@ -183,7 +183,6 @@ class AES(uint Nb, uint Nk, uint Nr) if ((Nb == 4 && Nk == 4 && Nr == 10) || (Nb
         0x9ce4b4d8, 0x90c15664, 0x6184cb7b, 0x70b632d5, 0x745c6c48, 0x4257b8d0,
     ];
 
-    private uint[] state;
     private uint[Nb * (Nr + 1)] w;
     private uint[Nb * (Nr + 1)] dw;
 
@@ -205,7 +204,7 @@ class AES(uint Nb, uint Nk, uint Nr) if ((Nb == 4 && Nk == 4 && Nr == 10) || (Nb
         for (int i = 0; i < message.length / 16; i++)
         {
             uint* stateptr = cast(uint*) message + i * 4;
-            state = stateptr[0 .. Nb];
+            uint[] state = stateptr[0 .. Nb];
             uint[Nb] t;
             uint round = 0;
 
@@ -245,7 +244,7 @@ class AES(uint Nb, uint Nk, uint Nr) if ((Nb == 4 && Nk == 4 && Nr == 10) || (Nb
         for (int i = 0; i < cipher.length / 16; i++)
         {
             uint* stateptr = cast(uint*) cipher + i * 4;
-            state = stateptr[0 .. Nb];
+            uint[] state = stateptr[0 .. Nb];
             uint[4] t;
 
             // Add last round key
