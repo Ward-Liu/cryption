@@ -40,8 +40,8 @@ package struct XTEA
     /// Encrypt given block of 8 ubytes
     private const void EncryptBlock(ubyte[] _ubytes, size_t _offset)
     {
-        auto v0 = ReadInt(_ubytes, _offset);
-        auto v1 = ReadInt(_ubytes, _offset + 4);
+        auto v0 = _ubytes.peek!(int, Endian.littleEndian)(_offset);
+        auto v1 = _ubytes.peek!(int, Endian.littleEndian)(_offset + 4);
 
         int sum = 0;
 
@@ -53,15 +53,15 @@ package struct XTEA
                     sum + m_key[cast(int)(cast(uint) sum >> 11) & 3]);
         }
 
-        StoreInt(v0, _ubytes, _offset);
-        StoreInt(v1, _ubytes, _offset + 4);
+        _ubytes.write!(int, Endian.littleEndian)(v0, _offset);
+        _ubytes.write!(int, Endian.littleEndian)(v1, _offset + 4);
     }
 
     /// Decrypt given block of 8 ubytes
     private const void DecryptBlock(ubyte[] _ubytes, size_t _offset)
     {
-        auto v0 = ReadInt(_ubytes, _offset);
-        auto v1 = ReadInt(_ubytes, _offset + 4);
+        auto v0 = _ubytes.peek!(int, Endian.littleEndian)(_offset);
+        auto v1 = _ubytes.peek!(int, Endian.littleEndian)(_offset + 4);
 
         auto sum = cast(int)(cast(uint) DELTA * cast(uint) m_rounds);
 
@@ -73,25 +73,8 @@ package struct XTEA
             v0 -= ((v1 << 4 ^ cast(int)(cast(uint) v1 >> 5)) + v1) ^ (sum + m_key[sum & 3]);
         }
 
-        StoreInt(v0, _ubytes, _offset);
-        StoreInt(v1, _ubytes, _offset + 4);
-    }
-
-    /// Read 32 bit int from buffer
-    private static int ReadInt(ubyte[] _ubytes, size_t _offset)
-    {
-        return (((_ubytes[_offset++] & 0xff) << 0) | ((_ubytes[_offset++] & 0xff) << 8) | (
-                (_ubytes[_offset++] & 0xff) << 16) | ((_ubytes[_offset] & 0xff) << 24));
-    }
-
-    /// Write 32 bit int from buffer
-    private static void StoreInt(int _value, ubyte[] _ubytes, size_t _offset)
-    {
-        auto unsignedValue = cast(uint) _value;
-        _ubytes[_offset++] = cast(ubyte)(unsignedValue >> 0);
-        _ubytes[_offset++] = cast(ubyte)(unsignedValue >> 8);
-        _ubytes[_offset++] = cast(ubyte)(unsignedValue >> 16);
-        _ubytes[_offset] = cast(ubyte)(unsignedValue >> 24);
+        _ubytes.write!(int, Endian.littleEndian)(v0, _offset);
+        _ubytes.write!(int, Endian.littleEndian)(v1, _offset + 4);
     }
 }
 
