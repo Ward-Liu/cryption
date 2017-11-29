@@ -4,15 +4,5 @@
 	"description": "A D Library of encryption, decryption(3DES, AES, TEA, RSA...), encode, hash, and message digital signatures.",
 	"license": "Apache License, Version 2.0",
 	"copyright": "Copyright © 2017, Shove",
-	"targetName": "cryption",
-    "configurations": [
-        {
-            "name": "default",
-            "targetType": "library"
-        },
-        {
-            "name": "unittest",
-            "targetType": "executable"
-        }
-    ]
+	"targetName": "cryption"
 }
