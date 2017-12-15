@@ -64,7 +64,7 @@ public:
 
     static RSAKeyPair generateKeyPair(uint bitLength = 1024)
     {
-        assert((bitLength >= 16) && (bitLength % 8 == 0), "Bitlength is required to be a multiple of 8 and not less than 16.");
+        assert((bitLength >= 128) && (bitLength % 8 == 0), "Bitlength is required to be a multiple of 8 and not less than 128.");
 
         BigInt x, y;
 
@@ -132,24 +132,24 @@ public:
         return T.decodeKey(key);
     }
 
-    static ubyte[] encrypt(T : iPKCS = SimpleFormat)(string key, ubyte[] data)
+    static ubyte[] encrypt(T : iPKCS = SimpleFormat)(string key, ubyte[] data, bool mixinXteaMode = false)
     {
-        return encrypt_decrypt!("encrypt", T)(key, data);
+        return encrypt_decrypt!("encrypt", T)(key, data, mixinXteaMode);
     }
 
-    static ubyte[] encrypt(RSAKeyInfo key, ubyte[] data)
+    static ubyte[] encrypt(RSAKeyInfo key, ubyte[] data, bool mixinXteaMode = false)
     {
-        return encrypt_decrypt!"encrypt"(key, data);
+        return encrypt_decrypt!"encrypt"(key, data, mixinXteaMode);
     }
 
-    static ubyte[] decrypt(T : iPKCS = SimpleFormat)(string key, ubyte[] data)
+    static ubyte[] decrypt(T : iPKCS = SimpleFormat)(string key, ubyte[] data, bool mixinXteaMode = false)
     {
-        return encrypt_decrypt!("decrypt", T)(key, data);
+        return encrypt_decrypt!("decrypt", T)(key, data, mixinXteaMode);
     }
 
-    static ubyte[] decrypt(RSAKeyInfo key, ubyte[] data)
+    static ubyte[] decrypt(RSAKeyInfo key, ubyte[] data, bool mixinXteaMode = false)
     {
-        return encrypt_decrypt!"decrypt"(key, data);
+        return encrypt_decrypt!"decrypt"(key, data, mixinXteaMode);
     }
 
 private:
@@ -211,16 +211,21 @@ private:
         return true;
     }
 
-    static ubyte[] encrypt_decrypt(string T1 = "encrypt", T2 : iPKCS = SimpleFormat)(string key, ubyte[] data)
+    static ubyte[] encrypt_decrypt(string T1, T2 : iPKCS = SimpleFormat)(string key, ubyte[] data, bool mixinXteaMode)
     if (T1 == "encrypt" || T1 == "decrypt")
     {
         RSAKeyInfo ki = decodeKey!T2(key);
-        return encrypt_decrypt!(T1)(ki, data);
+        return encrypt_decrypt!(T1)(ki, data, mixinXteaMode);
     }
 
-    static ubyte[] encrypt_decrypt(string T = "encrypt")(RSAKeyInfo key, ubyte[] data)
+    static ubyte[] encrypt_decrypt(string T)(RSAKeyInfo key, ubyte[] data, bool mixinXteaMode)
     if (T == "encrypt" || T == "decrypt")
     {
+        if (mixinXteaMode)
+        {
+            return encrypt_decrypt_mixinXteaMode!T(key, data);
+        }
+        
         size_t keySize = key.modulus_bytes.length;
 
         BigInt getNextBlock(out size_t blockSize)
@@ -233,7 +238,7 @@ private:
 
             if (T == "decrypt")
             {
-                ubyte[] block = data[0 .. $ >= keySize ? keySize : $];
+                ubyte[] block = data[0 .. ($ >= keySize) ? keySize : $];
                 blockSize = block.length;
                 return BigIntHelper.bigIntFromUByteArray(block);
             }
@@ -241,7 +246,7 @@ private:
             {
                 // Prevent preamble 0, and make the encryption results random
                 ubyte preamble = rnd.next!ubyte(0x01, 0xFF);
-                blockSize = keySize <= data.length ? keySize : data.length;
+                blockSize = (keySize <= data.length) ? keySize : data.length;
 
                 while (true)
                 {
@@ -265,14 +270,18 @@ private:
             size_t blockSize;
             BigInt block = getNextBlock(blockSize);
             if (blockSize == 0)
+            {
                 break;
+            }
 
             block = BigIntHelper.powMod(block, key.modulus, key.exponent);
             ubyte[] block_buf = BigIntHelper.bigIntToUByteArray(block);
             if (T == "encrypt")
             {
                 for (size_t i; i < keySize - block_buf.length; i++)
-                    ret ~= cast(ubyte) 0;
+                {
+                    ret ~= cast(ubyte)0;
+                }
             }
             else
             {
@@ -281,6 +290,111 @@ private:
 
             ret ~= block_buf;
             data = data[blockSize .. $];
+        }
+
+        return ret;
+    }
+    
+    static ubyte[] encrypt_decrypt_mixinXteaMode(string T)(RSAKeyInfo key, ubyte[] data)
+    if (T == "encrypt" || T == "decrypt")
+    {
+        import cryption.tea.xtea;
+
+        int[4] xteaKey;
+        int rounds = 64;
+        size_t keySize = key.modulus_bytes.length;
+
+        void generateXteaKey(ubyte[] buf)
+        {
+            ubyte[] data = new ubyte[int.sizeof * 4];
+            for (int i = 0; i < int.sizeof * 4; i++)
+            {
+                data[i] = buf[i % buf.length];
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                xteaKey[i] = data.peek!int(i * int.sizeof);
+            }            
+        }
+
+        BigInt getNextBlock(out size_t blockSize)
+        {
+            if (data.length == 0)
+            {
+                blockSize = 0;
+                return BigInt("0");
+            }
+
+            if (T == "decrypt")
+            {
+                ubyte[] block = data[0 .. ($ >= keySize) ? keySize : $];
+                blockSize = block.length;
+                return BigIntHelper.bigIntFromUByteArray(block);
+            }
+            else
+            {
+                // Prevent preamble 0, and make the encryption results random
+                ubyte preamble = rnd.next!ubyte(0x01, 0xFF);
+                blockSize = (keySize <= data.length) ? keySize : data.length;
+
+                while (true)
+                {
+                    ubyte[] block = [preamble] ~ data[0 .. blockSize];
+                    BigInt t = BigIntHelper.bigIntFromUByteArray(block);
+                    if (t >= key.modulus)
+                    {
+                        blockSize--;
+                        assert(blockSize > 0, "Key bits is too small.");
+                        continue;
+                    }
+
+                    generateXteaKey(block);
+                    return t;
+                }
+            }
+        }
+
+        ubyte[] ret;
+
+        size_t blockSize;
+        BigInt block = getNextBlock(blockSize);
+        if (blockSize == 0)
+        {
+            return ret;
+        }
+
+        block = BigIntHelper.powMod(block, key.modulus, key.exponent);
+        ubyte[] block_buf = BigIntHelper.bigIntToUByteArray(block);
+        if (T == "encrypt")
+        {
+            for (size_t i; i < keySize - block_buf.length; i++)
+            {
+                ret ~= cast(ubyte)0;
+            }
+        }
+        else
+        {
+            generateXteaKey(block_buf);
+            block_buf = block_buf[1 .. $];
+        }
+
+        ret ~= block_buf;
+
+        if (blockSize >= data.length)
+        {
+            return ret;
+        }
+
+        data = data[blockSize .. $];
+
+        if (T == "encrypt")
+        {
+            ret ~= Xtea.encrypt(data, xteaKey, rounds);
+        }
+        else
+        {
+            ret ~= Xtea.decrypt(data, xteaKey, rounds);
         }
 
         return ret;
