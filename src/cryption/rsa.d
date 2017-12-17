@@ -315,7 +315,7 @@ private:
             for (int i = 0; i < 4; i++)
             {
                 xteaKey[i] = data.peek!int(i * int.sizeof);
-            }            
+            } 
         }
 
         BigInt getNextBlock(out size_t blockSize)
