@@ -4,7 +4,6 @@ import std.bigint;
 import std.array;
 import std.algorithm.mutation;
 import std.conv;
-import std.datetime;
 import std.random;
 
 struct BigIntHelper
@@ -91,15 +90,17 @@ struct RandomGenerator
 
     static this()
     {
-        generator.seed(Clock.currTime().second);
+        generator.seed(unpredictableSeed);
     }
 
-    T next(T = uint)(T min = T.min, T max = T.max) if (is(Unqual!T == uint) || is(Unqual!T == ubyte))
+    T next(T = uint)(T min = T.min, T max = T.max) if (is(Unqual!T == uint) || is(Unqual!T == int) || is(Unqual!T == ubyte) || is(Unqual!T == byte))
     {
-        uint r = generator.front;
+        long r = generator.front;
         generator.popFront();
 
-        T ret = cast(T)r;
-        return ((ret < min || ret > max) ? next!T(min, max) : ret);
+        long _min = min;
+        long _max = max;
+        
+        return cast(T)(r % (_max - _min + 1) + _min);
     }
 }
