@@ -1,6 +1,7 @@
 module cryption.tea.xtea;
 
 import std.bitmanip;
+import std.exception;
 
 package struct XTEA
 {
@@ -31,7 +32,7 @@ package struct XTEA
         if (_count == -1)
             _count = cast(long)(_ubytes.length - _offset);
 
-        assert(_count % 8 == 0);
+        enforce(_count % 8 == 0);
 
         for (size_t i = _offset; i < (_offset + _count); i += 8)
             T(_ubytes, i);
