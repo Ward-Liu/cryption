@@ -376,9 +376,9 @@ class AESUtils
 
 unittest
 {
-    auto key = cast(ubyte[]) x"000102030405060708090a0b0c0d0e0f";
-    auto message = cast(ubyte[]) x"00112233445566778899aabbccddeeff";
-    auto cipher = cast(ubyte[]) x"69c4e0d86a7b0430d8cdb78070b4c55a";
+    auto key = cast(ubyte[]) hexString!"000102030405060708090a0b0c0d0e0f";
+    auto message = cast(ubyte[]) hexString!"00112233445566778899aabbccddeeff";
+    auto cipher = cast(ubyte[]) hexString!"69c4e0d86a7b0430d8cdb78070b4c55a";
 
     auto aes = new AES128(key);
 
