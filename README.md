@@ -1,3 +1,10 @@
+# !! This project has been migrated to crypto.
+
+Please visit the new project crypto. Thank you.
+
+http://code.dlang.org/packages/crypto
+https://github.com/shove70/crypto
+
 # A D Library of encryption, decryption, encode, hash, and message digital signatures.
 
 The same functional and fully compatible C++ project:
